@@ -1,8 +1,6 @@
 import chess, chess.engine
-# import chess.svg
-# import cairosvg
+import chess.svg
 import random
-# import os
 
 # Set this to wherever your chess engine is located
 CHESS_ENGINE_PATH = 'C:\Program Files\stockfish\stockfish-windows-x86-64-avx2.exe'
@@ -12,25 +10,20 @@ class RandomChess:
         self.board = chess.Board()
         self.players = [black_player, white_player]
 
-    def show_board(self):
-        print(self.board)
-        print(f'{self.players[self.board.turn].name} is playing {chess.COLOR_NAMES[self.board.turn]}!')
+    def svg_board(self):
+        return chess.svg.board(self.board, size=600)
 
     def is_game_over(self):
         return self.board.is_game_over()
 
     def end_game(self):
-        outcome = self.board.outcome()
-        if not outcome.winner:
-            print(f'The game has been drawn.')
-        else:
-            print(f'{self.players[outcome.winner].name} wins by {outcome.termination.name}!')
         for player in self.players:
             if isinstance(player, CPUPlayer):
                 player.quit()
+        return self.board.outcome()
     
-    def play_move(self, move):
-        self.board.push(move)
+    def play_move_uci(self, move):
+        self.board.push_uci(move)
 
     def current_player(self):
         return self.players[self.board.turn]
@@ -38,7 +31,7 @@ class RandomChess:
     def _move_count(self):
         return (self.board.legal_moves.count() + 4) // 5
 
-    def get_moves(self):
+    def get_moves(self) -> list[chess.Move]:
         available_moves = list(self.board.legal_moves)
         k = self._move_count()
         return random.sample(available_moves, k)

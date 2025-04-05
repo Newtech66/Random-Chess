@@ -1,0 +1,19 @@
+Server sends JSON:
+Three types of events: play, game over
+
+event: play
+svg_board: updated SVG representation of board
+move_list: list of move strings
+
+event: game_over
+svg_board: final SVG representation of board
+winner: black/white/draw
+termination: cause of game over
+
+-------------------------------------------------
+
+Client sends JSON:
+One type of event: play
+
+event: play
+move_uci: the uci of the move to be played
