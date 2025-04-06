@@ -22,4 +22,11 @@ function updateOptions(options, websocket, moves_list) {
   });
 }
 
-export { updateBoard, updateOptions };
+function clearOptions(options, message) {
+  options.textContent = '';
+  const text = document.createElement("p");
+  text.textContent = message;
+  options.appendChild(text);
+}
+
+export { updateBoard, updateOptions, clearOptions };

@@ -6,11 +6,28 @@ import random
 CHESS_ENGINE_PATH = 'C:\Program Files\stockfish\stockfish-windows-x86-64-avx2.exe'
 
 class RandomChess:
-    def __init__(self, white_player, black_player):
-        self.board = chess.Board()
+    def __init__(self, white_player=None, black_player=None):
+        self.board = None
         self.players = [black_player, white_player]
+    
+    def add_white(self, white_player):
+        if self.players[1] is not None:
+            raise ValueError('White player already exists.')
+        self.players[1] = white_player
+
+    def add_black(self, black_player):
+        if self.players[1] is not None:
+            raise ValueError('Black player already exists.')
+        self.players[1] = black_player
+
+    def init_game(self):
+        if self.board is not None:
+            raise ValueError('Game has already begun.')
+        self.board = chess.Board()
 
     def svg_board(self):
+        if self.board is None:
+            raise ValueError('Game has not begun.')
         return chess.svg.board(self.board, size=600)
 
     def is_game_over(self):
@@ -40,22 +57,6 @@ class HumanPlayer:
     def __init__(self, name):
         self.name = name
 
-    def request_move(self, move_list: list[chess.Move], board):
-        print(self.name + ', please input your move:')
-        for i, move in enumerate(move_list, 1):
-            print(f'{i}: {move}')
-        while True:
-            print('Please input the move number: ', end='')
-            s = input()
-            try:
-                n = int(s)
-                if 1 <= n <= len(move_list):
-                    return move_list[n - 1]
-                else:
-                    raise ValueError
-            except ValueError:
-                print(f'Please enter an integer between 1 to {len(move_list)}.')
-
 class CPUPlayer:
     def __init__(self, name):
         self.name = name
@@ -67,19 +68,3 @@ class CPUPlayer:
 
     def quit(self):
         self.engine.quit()
-
-# white_player = CPUPlayer('White')
-# black_player = CPUPlayer('Black')
-# game = RandomChess(white_player, black_player)
-
-# while not game.is_game_over():
-#     os.system('cls')
-#     game.show_board()
-#     moves = game.get_moves()
-#     played_move = game.current_player().request_move(moves, game.board)
-#     game.play_move(played_move)
-
-# game.end_game()
-# print(game.board)
-# svg_board = chess.svg.board(board=game.board, size=600)
-# cairosvg.svg2png(bytestring=svg_board.encode(), write_to='./board.png', output_width=720, output_height=720)

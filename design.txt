@@ -17,3 +17,39 @@ One type of event: play
 
 event: play
 move_uci: the uci of the move to be played
+
+Client to server:
+{
+    event: "init",
+    type: "host",
+}
+{
+    event: "init",
+    type: "join",
+    key: (token),
+}
+{
+    event: "turn",
+    move: (uci move),
+}
+
+Server to client:
+{
+    event: "host",
+    key: (token),
+}
+{
+    event: "turn",
+    svg_board: (board svg representation),
+    move_list: (list of str),
+}
+{
+    event: "wait",
+    svg_board: (board svg representation),
+}
+{
+    event: "game_over",
+    svg_board: (board svg representation),
+    winner: black/white/draw
+    termination: cause of game over
+}

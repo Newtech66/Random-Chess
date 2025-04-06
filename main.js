@@ -1,16 +1,26 @@
-import { updateBoard, updateOptions } from "./chess.js";
+import { updateBoard, updateOptions, clearOptions } from "./chess.js";
+import { loadContent } from "./routing.js";
 
-window.addEventListener("DOMContentLoaded", () => {
-  // Initialize the UI.
-  const board = document.getElementsByClassName("board")[0];
-  const options = document.getElementsByClassName("options")[0];
-  // Open the WebSocket connection and register event handlers.
-  const websocket = new WebSocket("ws://localhost:8001/");
-  receiveMoves(board, options, websocket);
-});
+var websocket;
+function getWebsocket(){
+  return websocket;  
+}
 
-function showMessage(message) {
-  window.setTimeout(() => window.alert(message), 50);
+function initGame(websocket) {
+  websocket.addEventListener("open", () => {
+    // Send an "init" event according to who is connecting.
+    const params = new URLSearchParams(window.location.search);
+    let event = { type: "init" };
+    if (params.has("join")) {
+      // Second player joins an existing game.
+      event.type = "join";
+      event.key = params.get("join");
+    } else {
+      // First player starts a new game.
+      event.type = "host";
+    }
+    websocket.send(JSON.stringify(event));
+  });
 }
 
 function receiveMoves(board, options, websocket) {
@@ -19,12 +29,16 @@ function receiveMoves(board, options, websocket) {
     switch (event.type) {
       case "play":
         // Update the UI with the move.
-        updateBoard(board, event.svg_board)
+        updateBoard(board, event.svg_board);
         updateOptions(options, websocket, event.move_list);
         break;
+      case "hold":
+        // Wait for other player to make a move.
+        updateBoard(board, event.svg_board);
+        clearOptions(options, "Waiting for other player to move.")
       case "game_over":
-        updateBoard(board, event.svg_board)
-        updateOptions(options, websocket, []);
+        updateBoard(board, event.svg_board);
+        clearOptions(options, "");
         if (event.player == "Draw"){
           showMessage(`The game was drawn!`);
         }else{
@@ -38,3 +52,19 @@ function receiveMoves(board, options, websocket) {
     }
   });
 }
+
+window.addEventListener("DOMContentLoaded", () => {
+  // Initialize the UI.
+  const frame = document.querySelector(".frame");
+  // Open the WebSocket connection and register event handlers.
+  console.log('Opening connection...')
+  websocket = new WebSocket("ws://localhost:8001/");
+  websocket.addEventListener('close', () => console.log('Closing connection...'));
+  loadContent('home');
+});
+
+function showMessage(message) {
+  window.setTimeout(() => window.alert(message), 50);
+}
+
+export { getWebsocket }
