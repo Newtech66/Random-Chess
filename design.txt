@@ -20,12 +20,13 @@ move_uci: the uci of the move to be played
 
 Client to server:
 {
-    event: "init",
-    type: "host",
+    event: "ready",
 }
 {
-    event: "init",
-    type: "join",
+    event: "host",
+}
+{
+    event: "join",
     key: (token),
 }
 {
@@ -34,6 +35,9 @@ Client to server:
 }
 
 Server to client:
+{
+    event: "ready",
+}
 {
     event: "host",
     key: (token),

@@ -6,49 +6,17 @@ function getWebsocket(){
   return websocket;  
 }
 
-function initGame(websocket) {
-  websocket.addEventListener("open", () => {
-    // Send an "init" event according to who is connecting.
-    const params = new URLSearchParams(window.location.search);
-    let event = { type: "init" };
-    if (params.has("join")) {
-      // Second player joins an existing game.
-      event.type = "join";
-      event.key = params.get("join");
-    } else {
-      // First player starts a new game.
-      event.type = "host";
-    }
-    websocket.send(JSON.stringify(event));
-  });
-}
-
-function receiveMoves(board, options, websocket) {
+function prepare(websocket) {
   websocket.addEventListener("message", ({ data }) => {
     const event = JSON.parse(data);
-    switch (event.type) {
-      case "play":
-        // Update the UI with the move.
-        updateBoard(board, event.svg_board);
-        updateOptions(options, websocket, event.move_list);
-        break;
-      case "hold":
-        // Wait for other player to make a move.
-        updateBoard(board, event.svg_board);
-        clearOptions(options, "Waiting for other player to move.")
-      case "game_over":
-        updateBoard(board, event.svg_board);
-        clearOptions(options, "");
-        if (event.player == "Draw"){
-          showMessage(`The game was drawn!`);
-        }else{
-          showMessage(`Player ${event.player} wins by ${event.termination}!`);
-        }
-        // No further messages are expected; close the WebSocket connection.
-        websocket.close(1000);
+    switch (event.event) {
+      case "ready":
+        loadContent('game');
+        let event = {event: "ready"};
+        websocket.send(JSON.stringify(event));
         break;
       default:
-        throw new Error(`Unsupported event type: ${event.type}.`);
+        // throw new Error(`Unsupported event type: ${event.type}.`);
     }
   });
 }
@@ -60,11 +28,8 @@ window.addEventListener("DOMContentLoaded", () => {
   console.log('Opening connection...')
   websocket = new WebSocket("ws://localhost:8001/");
   websocket.addEventListener('close', () => console.log('Closing connection...'));
+  prepare(websocket);
   loadContent('home');
 });
-
-function showMessage(message) {
-  window.setTimeout(() => window.alert(message), 50);
-}
 
 export { getWebsocket }

@@ -16,9 +16,9 @@ class RandomChess:
         self.players[1] = white_player
 
     def add_black(self, black_player):
-        if self.players[1] is not None:
+        if self.players[0] is not None:
             raise ValueError('Black player already exists.')
-        self.players[1] = black_player
+        self.players[0] = black_player
 
     def init_game(self):
         if self.board is not None:

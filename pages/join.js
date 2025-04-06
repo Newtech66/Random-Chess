@@ -1,7 +1,13 @@
+import { getWebsocket } from "../main.js";
 import { loadContent } from "../routing.js";
 
 function sendJoinKey(key){
-    console.log(key);
+    let socket = getWebsocket();
+    let event = {
+        event: "join",
+        key: key,
+    }
+    socket.send(JSON.stringify(event));
 }
 
 export default function join() {

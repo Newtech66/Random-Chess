@@ -21,24 +21,50 @@ async def error(websocket, message):
 
     """
     event = {
-        "type": "error",
+        "event": "error",
         "message": message,
     }
     await websocket.send(json.dumps(event))
 
-async def play(websocket, game, connected):
+async def send_turn(socket, game):
+    event = {
+        "event": "turn",
+        "svg_board": game.svg_board(),
+        "player": game.current_player().name,
+        "move_list": [move.uci() for move in game.get_moves()],
+    }
+    await socket.send(json.dumps(event))
+
+async def send_wait(socket, game):
+    event = {
+        "event": "wait",
+        "svg_board": game.svg_board(),
+        "player": game.current_player().name,
+    }
+    await socket.send(json.dumps(event))
+
+async def play(websocket, player, join_key):
     """
     Receive and process moves from a player.
 
     """
+    game, connected = JOIN[join_key]
+    if game.current_player() == player:
+        await send_turn(websocket, game)
+    else:
+        await send_wait(websocket, game)
     async for message in websocket:
-        # Parse a "play" event from the UI.
         event = json.loads(message)
-        assert event["type"] == "play"
-        move_uci = event["move_uci"]
-
-        # Play the move.
-        game.play_move_uci(move_uci)
+        if game.current_player() == player:
+            print(event)
+            # Parse a "play" event from the UI.
+            assert event["event"] == "turn"
+            move_uci = event["move"]
+            # Play the move.
+            game.play_move_uci(move_uci)
+        else:
+            print(event)
+            raise ValueError("Unexpected message received")
 
         # If game is over, send a "game_over" event.
         if game.is_game_over():
@@ -47,25 +73,15 @@ async def play(websocket, game, connected):
             if outcome.winner:
                 player = [blackp.name, whitep.name][outcome.winner]
             event = {
-                "type": "game_over",
+                "event": "game_over",
                 "svg_board": game.svg_board(),
                 "player": player,
                 "termination": outcome.termination.name,
             }
             broadcast(connected, json.dumps(event))
-
-        # Send a "play" event to update the UI.
-        event = {
-            "type": "play",
-            "svg_board": str(game.svg_board()),
-            "player": game.current_player().name,
-            "move_list": [move.uci() for move in game.get_moves()],
-        }
-        broadcast(connected, json.dumps(event))
-
-async def begin_game(game, connected):
-    async for websocket in connected:
-        await play(websocket, game, connected)
+        
+        await send_turn(connected[not game.board.turn], game)
+        await send_wait(connected[game.board.turn], game)
 
 async def host(websocket):
     """
@@ -76,7 +92,7 @@ async def host(websocket):
     # receiving moves from this game, and secret access tokens.
     game = RandomChess()
     game.add_white(whitep)
-    connected = {websocket}
+    connected = [websocket]
 
     join_key = secrets.token_urlsafe(12)
     JOIN[join_key] = game, connected
@@ -84,20 +100,21 @@ async def host(websocket):
     # Send the secret access tokens to the browser of the first player,
     # where they'll be used for building "join" and "watch" links.
     event = {
-        "type": "host",
+        "event": "host",
         "key": join_key,
     }
     print(f'Assigned key {join_key}')
     await websocket.send(json.dumps(event))
 
-    # # So like, after the key has been sent, we need to wait until another player joins
-    # message = await websocket.recv()
-    # event = json.loads(message)
-    # print(event)
-    # assert event["event"] == "init"
-    # ctype = event["type"]
+    message = await websocket.recv()
+    event = json.loads(message)
+    print(event)
+    assert event["event"] == "ready"
 
-
+    try:
+        await play(websocket, whitep, join_key)
+    finally:
+        JOIN.pop(join_key, None)
 
 async def join(websocket, join_key):
     """
@@ -114,17 +131,22 @@ async def join(websocket, join_key):
     # Register to receive moves from this game.
     game.add_black(blackp)
     game.init_game()
-    connected.add(websocket)
+    connected.append(websocket)
+
+    event = {
+        "event": "ready",
+    }
+    broadcast(connected, json.dumps(event))
+
+    message = await websocket.recv()
+    event = json.loads(message)
+    print(event)
+    assert event["event"] == "ready"
+
     try:
-        # Receive and process moves from the second player.
-        event = {
-            "type": "start",
-        }
-        await websocket.send(json.dumps(event))
-        await begin_game(websocket, game, connected)
+        await play(websocket, blackp, join_key)
     finally:
-        connected.remove(websocket)
-        del JOIN[join_key]
+        JOIN.pop(join_key, None)
 
 async def handler(websocket):
     """
@@ -135,8 +157,7 @@ async def handler(websocket):
     message = await websocket.recv()
     event = json.loads(message)
     print(event)
-    assert event["event"] == "init"
-    ctype = event["type"]
+    ctype = event["event"]
 
     if ctype == "join":
         # Second player joins an existing game.
@@ -147,7 +168,6 @@ async def handler(websocket):
         await host(websocket)
     else:
         raise ValueError(f"Unexpected event type {ctype}")
-
 
 async def main():
     async with serve(handler, "", 8001) as server:
