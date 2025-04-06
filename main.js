@@ -22,7 +22,7 @@ function prepare(websocket) {
 }
 
 function getWebSocketServer() {
-  if (window.location.host === "python-websockets.github.io") {
+  if (window.location.host === "newtech66.github.io") {
     return "wss://principal-heddie-clickboom-05c782d9.koyeb.app/";
   } else if (window.location.host === "localhost:8000") {
     return "ws://localhost:8001/";
